@@ -281,7 +281,7 @@ button:disabled {
 .result {
   margin-top: 15px;
   padding: 10px;
-  background: #f8f9fa;
+  background: #0e0e0e;
   border-radius: 3px;
 }
 

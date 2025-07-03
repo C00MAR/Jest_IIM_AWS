@@ -26,7 +26,15 @@
     },
     "storagetddprojectStreamArn": {
       "Type": "String",
-      "Default": "storagetddprojectArn"
+      "Default": "storagetddprojectStreamArn"
+    },
+    "apitddapiApiName": {
+      "Type": "String",
+      "Default": "apitddapiApiName"
+    },
+    "apitddapiApiId": {
+      "Type": "String",
+      "Default": "apitddapiApiId"
     }
   },
   "Conditions": {
@@ -81,6 +89,21 @@
             },
             "REGION": {
               "Ref": "AWS::Region"
+            },
+            "STORAGE_TDDPROJECT_NAME": {
+              "Ref": "storagetddprojectName"
+            },
+            "STORAGE_TDDPROJECT_ARN": {
+              "Ref": "storagetddprojectArn"
+            },
+            "STORAGE_TDDPROJECT_STREAMARN": {
+              "Ref": "storagetddprojectStreamArn"
+            },
+            "API_TDDAPI_APINAME": {
+              "Ref": "apitddapiApiName"
+            },
+            "API_TDDAPI_APIID": {
+              "Ref": "apitddapiApiId"
             }
           }
         },
@@ -228,6 +251,62 @@
           ]
         },
         "StartingPosition": "LATEST"
+      }
+    },
+    "AmplifyResourcesPolicy": {
+      "DependsOn": [
+        "LambdaExecutionRole"
+      ],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "amplify-lambda-execution-policy",
+        "Roles": [
+          {
+            "Ref": "LambdaExecutionRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:Put*",
+                "dynamodb:Create*",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PartiQLInsert",
+                "dynamodb:Get*",
+                "dynamodb:BatchGetItem",
+                "dynamodb:List*",
+                "dynamodb:Describe*",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:PartiQLSelect",
+                "dynamodb:Update*",
+                "dynamodb:RestoreTable*",
+                "dynamodb:PartiQLUpdate",
+                "dynamodb:Delete*",
+                "dynamodb:PartiQLDelete"
+              ],
+              "Resource": [
+                {
+                  "Ref": "storagetddprojectArn"
+                },
+                {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      {
+                        "Ref": "storagetddprojectArn"
+                      },
+                      "index/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
       }
     }
   },

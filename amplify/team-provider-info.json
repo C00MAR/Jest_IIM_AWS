@@ -15,7 +15,7 @@
       "function": {
         "tddprojetiimmm2e930d3b": {
           "deploymentBucketName": "amplify-tddprojetiimmm-dev-ee52e-deployment",
-          "s3Key": "amplify-builds/tddprojetiimmm2e930d3b-6b61447a6b57396b736f-build.zip"
+          "s3Key": "amplify-builds/tddprojetiimmm2e930d3b-6555525742734b4f7530-build.zip"
         }
       },
       "storage": {

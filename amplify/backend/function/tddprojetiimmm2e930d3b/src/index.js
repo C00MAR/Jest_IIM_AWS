@@ -1,10 +1,17 @@
+/* Amplify Params - DO NOT EDIT
+	ENV
+	REGION
+	STORAGE_TDDPROJECT_ARN
+	STORAGE_TDDPROJECT_NAME
+	STORAGE_TDDPROJECT_STREAMARN
+Amplify Params - DO NOT EDIT */
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 
 const client = new DynamoDBClient({ region: process.env.REGION || 'eu-west-1' });
 const dynamodb = DynamoDBDocumentClient.from(client);
 
-const TABLE_NAME = process.env.STORAGE_TDDPROJECT_NAME || 'tddproject';
+const TABLE_NAME = process.env.STORAGE_TDDPROJECT_NAME || 'tddproject-dev';
 
 const logger = {
   info: (message, data = {}) => console.log(JSON.stringify({ level: 'INFO', message, timestamp: new Date().toISOString(), ...data })),
@@ -254,6 +261,18 @@ exports.handler = async (event) => {
   logger.info('Lambda handler started', { requestId, eventType: event.Records ? 'DynamoDB' : 'API' });
 
   try {
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+        },
+        body: ''
+      };
+    }
+
     if (event.Records) {
       logger.info('Processing DynamoDB trigger event', { recordCount: event.Records.length, requestId });
       
@@ -289,6 +308,12 @@ exports.handler = async (event) => {
       
       return {
         statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
+        },
         body: JSON.stringify({
           message: 'DynamoDB trigger processed successfully',
           processedRecords: event.Records.length,
@@ -308,7 +333,10 @@ exports.handler = async (event) => {
           statusCode: 201,
           headers: {
             'Content-Type': 'application/json',
-            'X-Request-ID': requestId
+            'X-Request-ID': requestId,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
           },
           body: JSON.stringify(addResult)
         };
@@ -320,7 +348,10 @@ exports.handler = async (event) => {
           statusCode: 200,
           headers: {
             'Content-Type': 'application/json',
-            'X-Request-ID': requestId
+            'X-Request-ID': requestId,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
           },
           body: JSON.stringify(getResult)
         };
@@ -332,7 +363,10 @@ exports.handler = async (event) => {
           statusCode: 200,
           headers: {
             'Content-Type': 'application/json',
-            'X-Request-ID': requestId
+            'X-Request-ID': requestId,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
           },
           body: JSON.stringify(updateResult)
         };
@@ -343,7 +377,10 @@ exports.handler = async (event) => {
           statusCode: 400,
           headers: {
             'Content-Type': 'application/json',
-            'X-Request-ID': requestId
+            'X-Request-ID': requestId,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
           },
           body: JSON.stringify({
             error: 'Invalid action. Supported actions: addUser, getUser, updateUser',
@@ -358,7 +395,10 @@ exports.handler = async (event) => {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
-        'X-Request-ID': requestId
+        'X-Request-ID': requestId,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE'
       },
       body: JSON.stringify({
         error: error.message,
