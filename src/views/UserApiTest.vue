@@ -1,7 +1,7 @@
 <template>
   <div class="user-api-test">
     <h1>Test des API Utilisateurs</h1>
-    
+
     <!-- Section Créer un utilisateur -->
     <section>
       <h2>Créer un utilisateur</h2>
@@ -98,43 +98,43 @@ export default {
       loading: false,
       error: null,
       apiBaseUrl: 'https://m4p4qzo7u6.execute-api.eu-west-1.amazonaws.com/dev',
-      
+
       // Formulaire de création
       createForm: {
         userId: '',
         name: '',
         email: '',
         age: null,
-        phone: ''
+        phone: '',
       },
       createResult: null,
-      
+
       // Récupération
       getUserId: '',
       getResult: null,
-      
+
       // Mise à jour
       updateForm: {
         userId: '',
         name: '',
         email: '',
-        age: null
+        age: null,
       },
-      updateResult: null
+      updateResult: null,
     }
   },
   methods: {
     async createUser() {
-      this.loading = true;
-      this.error = null;
-      this.createResult = null;
-      
+      this.loading = true
+      this.error = null
+      this.createResult = null
+
       try {
-        const userData = {};
-        if (this.createForm.name) userData.name = this.createForm.name;
-        if (this.createForm.email) userData.email = this.createForm.email;
-        if (this.createForm.age) userData.age = this.createForm.age;
-        if (this.createForm.phone) userData.phone = this.createForm.phone;
+        const userData = {}
+        if (this.createForm.name) userData.name = this.createForm.name
+        if (this.createForm.email) userData.email = this.createForm.email
+        if (this.createForm.age) userData.age = this.createForm.age
+        if (this.createForm.phone) userData.phone = this.createForm.phone
 
         const response = await fetch(`${this.apiBaseUrl}/user`, {
           method: 'POST',
@@ -144,29 +144,29 @@ export default {
           body: JSON.stringify({
             action: 'addUser',
             userId: this.createForm.userId,
-            userData: userData
-          })
-        });
+            userData: userData,
+          }),
+        })
 
-        const result = await response.json();
-        
+        const result = await response.json()
+
         if (response.ok) {
-          this.createResult = result;
+          this.createResult = result
         } else {
-          this.error = result.error || 'Erreur lors de la création';
+          this.error = result.error || 'Erreur lors de la création'
         }
       } catch (err) {
-        this.error = `Erreur réseau: ${err.message}`;
+        this.error = `Erreur réseau: ${err.message}`
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
 
     async getUser() {
-      this.loading = true;
-      this.error = null;
-      this.getResult = null;
-      
+      this.loading = true
+      this.error = null
+      this.getResult = null
+
       try {
         const response = await fetch(`${this.apiBaseUrl}/user`, {
           method: 'POST',
@@ -175,34 +175,34 @@ export default {
           },
           body: JSON.stringify({
             action: 'getUser',
-            userId: this.getUserId
-          })
-        });
+            userId: this.getUserId,
+          }),
+        })
 
-        const result = await response.json();
-        
+        const result = await response.json()
+
         if (response.ok) {
-          this.getResult = result;
+          this.getResult = result
         } else {
-          this.error = result.error || 'Erreur lors de la récupération';
+          this.error = result.error || 'Erreur lors de la récupération'
         }
       } catch (err) {
-        this.error = `Erreur réseau: ${err.message}`;
+        this.error = `Erreur réseau: ${err.message}`
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
 
     async updateUser() {
-      this.loading = true;
-      this.error = null;
-      this.updateResult = null;
-      
+      this.loading = true
+      this.error = null
+      this.updateResult = null
+
       try {
-        const userData = {};
-        if (this.updateForm.name) userData.name = this.updateForm.name;
-        if (this.updateForm.email) userData.email = this.updateForm.email;
-        if (this.updateForm.age) userData.age = this.updateForm.age;
+        const userData = {}
+        if (this.updateForm.name) userData.name = this.updateForm.name
+        if (this.updateForm.email) userData.email = this.updateForm.email
+        if (this.updateForm.age) userData.age = this.updateForm.age
 
         const response = await fetch(`${this.apiBaseUrl}/user`, {
           method: 'POST',
@@ -212,24 +212,24 @@ export default {
           body: JSON.stringify({
             action: 'updateUser',
             userId: this.updateForm.userId,
-            userData: userData
-          })
-        });
+            userData: userData,
+          }),
+        })
 
-        const result = await response.json();
-        
+        const result = await response.json()
+
         if (response.ok) {
-          this.updateResult = result;
+          this.updateResult = result
         } else {
-          this.error = result.error || 'Erreur lors de la mise à jour';
+          this.error = result.error || 'Erreur lors de la mise à jour'
         }
       } catch (err) {
-        this.error = `Erreur réseau: ${err.message}`;
+        this.error = `Erreur réseau: ${err.message}`
       } finally {
-        this.loading = false;
+        this.loading = false
       }
-    }
-  }
+    },
+  },
 }
 </script>
 
