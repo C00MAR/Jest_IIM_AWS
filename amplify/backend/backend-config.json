@@ -1,0 +1,44 @@
+{
+  "function": {
+    "tddprojetiimmm2e930d3b": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn",
+            "StreamArn"
+          ],
+          "category": "storage",
+          "resourceName": "tddproject"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_tddprojetiimmm2e930d3b_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "tddprojetiimmm2e930d3b"
+        }
+      ]
+    },
+    "AMPLIFY_function_tddprojetiimmm2e930d3b_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "tddprojetiimmm2e930d3b"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "tddproject": {
+      "providerPlugin": "awscloudformation",
+      "service": "DynamoDB"
+    }
+  }
+}

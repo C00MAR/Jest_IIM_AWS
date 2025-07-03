@@ -1,0 +1,12 @@
+{
+  "resourceName": "tddproject",
+  "tableName": "tddproject",
+  "partitionKey": {
+    "fieldName": "user",
+    "fieldType": "string"
+  },
+  "gsi": [],
+  "triggerFunctions": [
+    "tddprojetiimmm2e930d3b"
+  ]
+}
