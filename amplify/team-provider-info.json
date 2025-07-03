@@ -15,11 +15,14 @@
       "function": {
         "tddprojetiimmm2e930d3b": {
           "deploymentBucketName": "amplify-tddprojetiimmm-dev-ee52e-deployment",
-          "s3Key": "amplify-builds/tddprojetiimmm2e930d3b-6f6b56446741474b6243-build.zip"
+          "s3Key": "amplify-builds/tddprojetiimmm2e930d3b-6b61447a6b57396b736f-build.zip"
         }
       },
       "storage": {
         "tddproject": {}
+      },
+      "api": {
+        "tddapi": {}
       }
     }
   }

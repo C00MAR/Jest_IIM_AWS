@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "paths": {
+    "/user": {
+      "name": "/user",
+      "lambdaFunction": "tddprojetiimmm2e930d3b",
+      "permissions": {
+        "setting": "open"
+      }
+    }
+  }
+}

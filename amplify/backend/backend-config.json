@@ -1,4 +1,20 @@
 {
+  "api": {
+    "tddapi": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "tddprojetiimmm2e930d3b"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
   "function": {
     "tddprojetiimmm2e930d3b": {
       "build": true,
