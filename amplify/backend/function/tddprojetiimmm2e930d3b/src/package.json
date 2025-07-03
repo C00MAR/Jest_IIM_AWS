@@ -5,9 +5,13 @@
   "main": "index.js",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:unit": "jest",
+    "test:lambda": "cd amplify/backend/function/tddprojetiimmm2e930d3b/src && npm test",
+    "test:lambda:coverage": "cd amplify/backend/function/tddprojetiimmm2e930d3b/src && npm run test:coverage",
+    "test:all": "npm run test:unit && npm run test:lambda",
+    "test:watch": "npm run test:lambda -- --watch",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/ amplify/backend/function/**/src/"
   },
   "dependencies": {
     "aws-sdk": "^2.1691.0"

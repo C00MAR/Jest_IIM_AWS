@@ -13,8 +13,8 @@ export default defineConfig([
 
   {
     ignores: [
-      '**/dist/**', 
-      '**/dist-ssr/**', 
+      '**/dist/**',
+      '**/dist-ssr/**',
       '**/coverage/**',
       '**/amplify/**',
       '**/node_modules/**'
@@ -31,7 +31,7 @@ export default defineConfig([
 
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
-  
+
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],
@@ -46,6 +46,11 @@ export default defineConfig([
       ecmaVersion: 2022,
       sourceType: 'commonjs'
     },
+    rules: {
+      'no-console': ['warn', { allow: ['error', 'warn'] }],
+      'prefer-const': 'error',
+      'no-unused-vars': 'error'
+    }
   },
 
   skipFormatting,

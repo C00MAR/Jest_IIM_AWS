@@ -6,6 +6,47 @@ const dynamodb = new AWS.DynamoDB.DocumentClient({
 
 const TABLE_NAME = process.env.STORAGE_TDDPROJECT_NAME || 'tddproject';
 
+const logger = {
+  info: (message, data = {}) => console.log(JSON.stringify({ level: 'INFO', message, timestamp: new Date().toISOString(), ...data })),
+  error: (message, error = {}) => console.error(JSON.stringify({ level: 'ERROR', message, timestamp: new Date().toISOString(), error: error.message || error })),
+  warn: (message, data = {}) => console.warn(JSON.stringify({ level: 'WARN', message, timestamp: new Date().toISOString(), ...data }))
+};
+
+/**
+ * Valide les données utilisateur
+ * @param {Object} userData - Les données de l'utilisateur à valider
+ * @returns {Array} - Tableau des erreurs de validation
+ */
+function validateUserData(userData) {
+  const errors = [];
+  
+  if (!userData.name || typeof userData.name !== 'string' || userData.name.trim().length === 0) {
+    errors.push('Name is required and must be a non-empty string');
+  }
+  
+  if (userData.name && userData.name.length > 255) {
+    errors.push('Name must be less than 256 characters');
+  }
+  
+  if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+    errors.push('Invalid email format');
+  }
+  
+  if (userData.email && userData.email.length > 255) {
+    errors.push('Email must be less than 256 characters');
+  }
+  
+  if (userData.age !== undefined && (!Number.isInteger(userData.age) || userData.age < 0 || userData.age > 150)) {
+    errors.push('Age must be a positive integer between 0 and 150');
+  }
+  
+  if (userData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(userData.phone.replace(/\s+/g, ''))) {
+    errors.push('Invalid phone number format');
+  }
+  
+  return errors;
+}
+
 /**
  * Ajoute un utilisateur dans DynamoDB
  * @param {string} userId - L'identifiant de l'utilisateur
@@ -13,13 +54,26 @@ const TABLE_NAME = process.env.STORAGE_TDDPROJECT_NAME || 'tddproject';
  * @returns {Promise<Object>} - Résultat de l'opération
  */
 async function addUser(userId, userData) {
-  if (!userId) {
-    throw new Error('User ID is required');
+  logger.info('Starting addUser operation', { userId, userDataKeys: Object.keys(userData) });
+  
+  if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    const error = new Error('User ID is required and must be a non-empty string');
+    logger.error('Invalid userId provided', { userId, error });
+    throw error;
+  }
+
+  const validationErrors = validateUserData(userData);
+  if (validationErrors.length > 0) {
+    const error = new Error(`Validation failed: ${validationErrors.join(', ')}`);
+    logger.error('User data validation failed', { userId, validationErrors, error });
+    throw error;
   }
 
   const item = {
-    user: userId,
+    user: userId.trim(),
     ...userData,
+    name: userData.name.trim(),
+    email: userData.email ? userData.email.trim().toLowerCase() : undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -34,7 +88,10 @@ async function addUser(userId, userData) {
   };
 
   try {
+    logger.info('Attempting to create user in DynamoDB', { userId, tableName: TABLE_NAME });
     await dynamodb.put(params).promise();
+    
+    logger.info('User created successfully', { userId, createdAt: item.createdAt });
     return {
       success: true,
       message: 'User created successfully',
@@ -42,9 +99,11 @@ async function addUser(userId, userData) {
     };
   } catch (error) {
     if (error.code === 'ConditionalCheckFailedException') {
-      throw new Error('User already exists');
+      const userExistsError = new Error('User already exists');
+      logger.warn('Attempt to create existing user', { userId, error: userExistsError });
+      throw userExistsError;
     }
-    console.error('Error adding user:', error);
+    logger.error('Failed to create user in DynamoDB', { userId, error });
     throw new Error('Failed to add user');
   }
 }
@@ -55,24 +114,32 @@ async function addUser(userId, userData) {
  * @returns {Promise<Object>} - L'utilisateur trouvé
  */
 async function getUser(userId) {
-  if (!userId) {
-    throw new Error('User ID is required');
+  logger.info('Starting getUser operation', { userId });
+  
+  if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    const error = new Error('User ID is required and must be a non-empty string');
+    logger.error('Invalid userId provided for getUser', { userId, error });
+    throw error;
   }
 
   const params = {
     TableName: TABLE_NAME,
     Key: {
-      user: userId
+      user: userId.trim()
     }
   };
 
   try {
+    logger.info('Attempting to retrieve user from DynamoDB', { userId, tableName: TABLE_NAME });
     const result = await dynamodb.get(params).promise();
     
     if (!result.Item) {
-      throw new Error('User not found');
+      const error = new Error('User not found');
+      logger.warn('User not found in database', { userId, error });
+      throw error;
     }
 
+    logger.info('User retrieved successfully', { userId, userExists: true });
     return {
       success: true,
       user: result.Item
@@ -81,7 +148,7 @@ async function getUser(userId) {
     if (error.message === 'User not found') {
       throw error;
     }
-    console.error('Error getting user:', error);
+    logger.error('Failed to retrieve user from DynamoDB', { userId, error });
     throw new Error('Failed to get user');
   }
 }
@@ -93,18 +160,37 @@ async function getUser(userId) {
  * @returns {Promise<Object>} - Résultat de l'opération
  */
 async function updateUser(userId, updateData) {
-  if (!userId) {
-    throw new Error('User ID is required');
+  logger.info('Starting updateUser operation', { userId, updateDataKeys: Object.keys(updateData) });
+  
+  if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    const error = new Error('User ID is required and must be a non-empty string');
+    logger.error('Invalid userId provided for updateUser', { userId, error });
+    throw error;
+  }
+
+  const validationErrors = validateUserData(updateData);
+  if (validationErrors.length > 0) {
+    const error = new Error(`Validation failed: ${validationErrors.join(', ')}`);
+    logger.error('Update data validation failed', { userId, validationErrors, error });
+    throw error;
+  }
+
+  const cleanUpdateData = { ...updateData };
+  if (cleanUpdateData.name) {
+    cleanUpdateData.name = cleanUpdateData.name.trim();
+  }
+  if (cleanUpdateData.email) {
+    cleanUpdateData.email = cleanUpdateData.email.trim().toLowerCase();
   }
 
   const updateExpression = [];
   const expressionAttributeNames = {};
   const expressionAttributeValues = {};
 
-  Object.keys(updateData).forEach((key, index) => {
+  Object.keys(cleanUpdateData).forEach((key, index) => {
     updateExpression.push(`#attr${index} = :val${index}`);
     expressionAttributeNames[`#attr${index}`] = key;
-    expressionAttributeValues[`:val${index}`] = updateData[key];
+    expressionAttributeValues[`:val${index}`] = cleanUpdateData[key];
   });
 
   updateExpression.push(`#updatedAt = :updatedAt`);
@@ -114,7 +200,7 @@ async function updateUser(userId, updateData) {
   const params = {
     TableName: TABLE_NAME,
     Key: {
-      user: userId
+      user: userId.trim()
     },
     UpdateExpression: `SET ${updateExpression.join(', ')}`,
     ExpressionAttributeNames: expressionAttributeNames,
@@ -126,7 +212,10 @@ async function updateUser(userId, updateData) {
   expressionAttributeNames['#user'] = 'user';
 
   try {
+    logger.info('Attempting to update user in DynamoDB', { userId, tableName: TABLE_NAME });
     const result = await dynamodb.update(params).promise();
+    
+    logger.info('User updated successfully', { userId, updatedAt: expressionAttributeValues[':updatedAt'] });
     return {
       success: true,
       message: 'User updated successfully',
@@ -134,9 +223,11 @@ async function updateUser(userId, updateData) {
     };
   } catch (error) {
     if (error.code === 'ConditionalCheckFailedException') {
-      throw new Error('User not found');
+      const userNotFoundError = new Error('User not found');
+      logger.warn('Attempt to update non-existent user', { userId, error: userNotFoundError });
+      throw userNotFoundError;
     }
-    console.error('Error updating user:', error);
+    logger.error('Failed to update user in DynamoDB', { userId, error });
     throw new Error('Failed to update user');
   }
 }
@@ -146,70 +237,119 @@ async function updateUser(userId, updateData) {
  * @type {import('@types/aws-lambda').APIGatewayProxyHandler}
  */
 exports.handler = async (event) => {
-  console.log(`EVENT: ${JSON.stringify(event)}`);
+  const requestId = event.requestContext?.requestId || 'unknown';
+  logger.info('Lambda handler started', { requestId, eventType: event.Records ? 'DynamoDB' : 'API' });
 
   try {
     if (event.Records) {
+      logger.info('Processing DynamoDB trigger event', { recordCount: event.Records.length, requestId });
+      
       for (const record of event.Records) {
-        console.log('DynamoDB Record:', JSON.stringify(record, null, 2));
+        logger.info('Processing DynamoDB record', { 
+          eventName: record.eventName, 
+          userId: record.dynamodb.Keys?.user?.S,
+          requestId 
+        });
         
         if (record.eventName === 'INSERT') {
-          console.log('New user created:', record.dynamodb.NewImage);
+          logger.info('New user created via DynamoDB trigger', { 
+            userId: record.dynamodb.Keys?.user?.S,
+            requestId 
+          });
         } else if (record.eventName === 'MODIFY') {
-          console.log('User updated:', record.dynamodb.NewImage);
+          logger.info('User updated via DynamoDB trigger', { 
+            userId: record.dynamodb.Keys?.user?.S,
+            requestId 
+          });
         } else if (record.eventName === 'REMOVE') {
-          console.log('User deleted:', record.dynamodb.OldImage);
+          logger.info('User deleted via DynamoDB trigger', { 
+            userId: record.dynamodb.Keys?.user?.S,
+            requestId 
+          });
         }
       }
+      
+      logger.info('DynamoDB trigger processing completed', { 
+        processedRecords: event.Records.length, 
+        requestId 
+      });
       
       return {
         statusCode: 200,
         body: JSON.stringify({
           message: 'DynamoDB trigger processed successfully',
-          processedRecords: event.Records.length
+          processedRecords: event.Records.length,
+          requestId
         })
       };
     }
 
     const { action, userId, userData } = JSON.parse(event.body || '{}');
+    logger.info('Processing API request', { action, userId: userId ? 'provided' : 'missing', requestId });
 
     switch (action) {
       case 'addUser':
+        logger.info('Executing addUser action', { userId, requestId });
         const addResult = await addUser(userId, userData);
         return {
           statusCode: 201,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId
+          },
           body: JSON.stringify(addResult)
         };
 
       case 'getUser':
+        logger.info('Executing getUser action', { userId, requestId });
         const getResult = await getUser(userId);
         return {
           statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId
+          },
           body: JSON.stringify(getResult)
         };
 
       case 'updateUser':
+        logger.info('Executing updateUser action', { userId, requestId });
         const updateResult = await updateUser(userId, userData);
         return {
           statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId
+          },
           body: JSON.stringify(updateResult)
         };
 
       default:
+        logger.warn('Invalid action requested', { action, requestId });
         return {
           statusCode: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId
+          },
           body: JSON.stringify({
-            error: 'Invalid action. Supported actions: addUser, getUser, updateUser'
+            error: 'Invalid action. Supported actions: addUser, getUser, updateUser',
+            requestId
           })
         };
     }
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Lambda handler error', { error, requestId });
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId
+      },
       body: JSON.stringify({
-        error: error.message
+        error: error.message,
+        requestId
       })
     };
   }
@@ -219,5 +359,6 @@ module.exports = {
   handler: exports.handler,
   addUser,
   getUser,
-  updateUser
+  updateUser,
+  validateUserData
 };
