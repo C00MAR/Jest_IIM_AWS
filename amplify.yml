@@ -6,12 +6,10 @@ backend:
         - nvm install 20
         - nvm use 20
         - npm ci --cache .npm --prefer-offline
-        - '# Run Jest tests before backend build'
+        - npm run install:lambda
         - npm run test:lambda
-        # - npm run test:unit
     build:
       commands:
-        - '# Execute Amplify CLI with the helper script'
         - amplifyPush --simple
 frontend:
   phases:
@@ -20,16 +18,17 @@ frontend:
         - nvm install 20
         - nvm use 20
         - npm ci --cache .npm --prefer-offline
+        # - npm run test:unit
     build:
       commands:
         - npm run lint
         - npm run format
         - npm run build
   artifacts:
-    # Le répertoire de sortie de Vite est 'dist'
     baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
       - .npm/**/*
+      - amplify/backend/function/tddprojetiimmm2e930d3b/src/node_modules/**/*
