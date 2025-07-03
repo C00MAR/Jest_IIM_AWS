@@ -1,4 +1,4 @@
-import { defineConfig, globalIgnores } from 'eslint/config'
+import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
@@ -11,7 +11,15 @@ export default defineConfig([
     files: ['**/*.{js,mjs,jsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  {
+    ignores: [
+      '**/dist/**', 
+      '**/dist-ssr/**', 
+      '**/coverage/**',
+      '**/amplify/**',
+      '**/node_modules/**'
+    ]
+  },
 
   {
     languageOptions: {
@@ -28,5 +36,17 @@ export default defineConfig([
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],
   },
+
+  {
+    files: ['amplify/backend/function/**/src/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      ecmaVersion: 2022,
+      sourceType: 'commonjs'
+    },
+  },
+
   skipFormatting,
 ])
