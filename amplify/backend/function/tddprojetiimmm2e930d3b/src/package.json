@@ -14,10 +14,13 @@
     "format": "prettier --write src/ amplify/backend/function/**/src/"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.840.0",
+    "@aws-sdk/lib-dynamodb": "^3.840.0",
     "aws-sdk": "^2.1691.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.92",
+    "aws-sdk-client-mock": "^4.1.0",
     "jest": "^30.0.4"
   },
   "jest": {

@@ -1,8 +1,25 @@
-const AWS = require('aws-sdk');
+const mockSend = jest.fn();
+
+jest.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: jest.fn(() => ({}))
+}));
+
+jest.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: {
+    from: jest.fn(() => ({
+      send: mockSend
+    }))
+  },
+  PutCommand: jest.fn(),
+  GetCommand: jest.fn(),
+  UpdateCommand: jest.fn()
+}));
+
+const { PutCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const { addUser, getUser, updateUser, handler, validateUserData } = require('../index');
 
-jest.mock('aws-sdk');
 const originalConsole = { ...console };
+
 beforeEach(() => {
   console.log = jest.fn();
   console.error = jest.fn();
@@ -14,18 +31,9 @@ afterEach(() => {
 });
 
 describe('Lambda Function Tests', () => {
-  let mockDynamoDB;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    mockDynamoDB = {
-      put: jest.fn(),
-      get: jest.fn(),
-      update: jest.fn()
-    };
-
-    AWS.DynamoDB.DocumentClient.mockImplementation(() => mockDynamoDB);
+    mockSend.mockClear();
     
     process.env.REGION = 'eu-west-1';
     process.env.STORAGE_TDDPROJECT_NAME = 'tddproject-test';
@@ -158,9 +166,7 @@ describe('Lambda Function Tests', () => {
         age: 30
       };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       const result = await addUser(userId, userData);
 
@@ -172,6 +178,17 @@ describe('Lambda Function Tests', () => {
       expect(result.user.age).toBe(userData.age);
       expect(result.user.createdAt).toBeDefined();
       expect(result.user.updatedAt).toBeDefined();
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(PutCommand).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'tddproject',
+        Item: expect.objectContaining({
+          user: 'user123',
+          name: 'John Doe',
+          email: 'john@example.com',
+          age: 30
+        })
+      }));
 
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('"level":"INFO"')
@@ -235,9 +252,7 @@ describe('Lambda Function Tests', () => {
         email: '  JOHN@EXAMPLE.COM  '
       };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       const result = await addUser(userId, userData);
 
@@ -251,11 +266,9 @@ describe('Lambda Function Tests', () => {
       const userData = { name: 'John Doe' };
 
       const conditionalError = new Error('ConditionalCheckFailedException');
-      conditionalError.code = 'ConditionalCheckFailedException';
+      conditionalError.name = 'ConditionalCheckFailedException';
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockRejectedValue(conditionalError)
-      });
+      mockSend.mockRejectedValue(conditionalError);
 
       await expect(addUser(userId, userData)).rejects.toThrow('User already exists');
       
@@ -268,9 +281,7 @@ describe('Lambda Function Tests', () => {
       const userId = 'user123';
       const userData = { name: 'John Doe' };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockRejectedValue(new Error('AWS Error'))
-      });
+      mockSend.mockRejectedValue(new Error('AWS Error'));
 
       await expect(addUser(userId, userData)).rejects.toThrow('Failed to add user');
     });
@@ -286,16 +297,20 @@ describe('Lambda Function Tests', () => {
         createdAt: '2024-01-01T00:00:00.000Z'
       };
 
-      mockDynamoDB.get.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({
-          Item: mockUser
-        })
+      mockSend.mockResolvedValue({
+        Item: mockUser
       });
 
       const result = await getUser(userId);
 
       expect(result.success).toBe(true);
       expect(result.user).toEqual(mockUser);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(GetCommand).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'tddproject',
+        Key: { user: 'user123' }
+      }));
 
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Starting getUser operation')
@@ -315,9 +330,7 @@ describe('Lambda Function Tests', () => {
     it('should throw error if user not found', async () => {
       const userId = 'nonexistent';
 
-      mockDynamoDB.get.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       await expect(getUser(userId)).rejects.toThrow('User not found');
       
@@ -329,9 +342,7 @@ describe('Lambda Function Tests', () => {
     it('should handle DynamoDB errors', async () => {
       const userId = 'user123';
 
-      mockDynamoDB.get.mockReturnValue({
-        promise: jest.fn().mockRejectedValue(new Error('AWS Error'))
-      });
+      mockSend.mockRejectedValue(new Error('AWS Error'));
 
       await expect(getUser(userId)).rejects.toThrow('Failed to get user');
     });
@@ -354,10 +365,8 @@ describe('Lambda Function Tests', () => {
         updatedAt: expect.any(String)
       };
 
-      mockDynamoDB.update.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({
-          Attributes: updatedUser
-        })
+      mockSend.mockResolvedValue({
+        Attributes: updatedUser
       });
 
       const result = await updateUser(userId, updateData);
@@ -365,6 +374,12 @@ describe('Lambda Function Tests', () => {
       expect(result.success).toBe(true);
       expect(result.message).toBe('User updated successfully');
       expect(result.user).toEqual(updatedUser);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(UpdateCommand).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'tddproject',
+        Key: { user: 'user123' }
+      }));
 
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Starting updateUser operation')
@@ -393,11 +408,9 @@ describe('Lambda Function Tests', () => {
       const updateData = { name: 'New Name' };
 
       const conditionalError = new Error('ConditionalCheckFailedException');
-      conditionalError.code = 'ConditionalCheckFailedException';
+      conditionalError.name = 'ConditionalCheckFailedException';
 
-      mockDynamoDB.update.mockReturnValue({
-        promise: jest.fn().mockRejectedValue(conditionalError)
-      });
+      mockSend.mockRejectedValue(conditionalError);
 
       await expect(updateUser(userId, updateData)).rejects.toThrow('User not found');
     });
@@ -442,9 +455,7 @@ describe('Lambda Function Tests', () => {
         requestContext: { requestId: 'test-request-123' }
       };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       const result = await handler(event);
 
@@ -504,9 +515,7 @@ describe('Lambda Function Tests', () => {
         email: 'josé@example.com'
       };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       const result = await addUser(userId, userData);
 
@@ -521,9 +530,7 @@ describe('Lambda Function Tests', () => {
         name: 'Minimal User'
       };
 
-      mockDynamoDB.put.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
+      mockSend.mockResolvedValue({});
 
       const result = await addUser(userId, userData);
 
@@ -538,13 +545,17 @@ describe('Lambda Function Tests', () => {
         '+1234567890',
         '1234567890',
         '+33123456789',
-        '0123456789'
+        '0123456789',
+        '+1 234 567 8901',
+        '01-23-45-67-89',
+        '(01) 23 45 67 89'
       ];
 
       for (const phone of testCases) {
         const userData = { name: 'Test User', phone };
         const errors = validateUserData(userData);
-        expect(errors.filter(e => e.includes('phone'))).toHaveLength(0);
+        const phoneErrors = errors.filter(e => e.includes('phone'));
+        expect(phoneErrors).toHaveLength(0);
       }
     });
 
@@ -554,7 +565,7 @@ describe('Lambda Function Tests', () => {
         '123',
         '+',
         '++1234567890',
-        '123-456-7890'
+        '1234567890123456'
       ];
 
       for (const phone of testCases) {
@@ -562,6 +573,16 @@ describe('Lambda Function Tests', () => {
         const errors = validateUserData(userData);
         expect(errors).toContain('Invalid phone number format');
       }
+    });
+
+    it('should handle email with spaces correctly', async () => {
+      const userData = {
+        name: 'Test User',
+        email: '  test@example.com  '
+      };
+
+      const errors = validateUserData(userData);
+      expect(errors.filter(e => e.includes('email'))).toHaveLength(0);
     });
   });
 });

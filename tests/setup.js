@@ -3,7 +3,7 @@
 process.env.NODE_ENV = 'test';
 process.env.REGION = 'eu-west-1';
 
-jest.mock('aws-sdk', () => ({
+global.AWS = {
   DynamoDB: {
     DocumentClient: jest.fn(() => ({
       put: jest.fn(),
@@ -17,7 +17,9 @@ jest.mock('aws-sdk', () => ({
   config: {
     update: jest.fn()
   }
-}));
+};
+
+jest.doMock('aws-sdk', () => global.AWS);
 
 global.createMockDynamoDBResponse = (data) => ({
   promise: jest.fn().mockResolvedValue(data)

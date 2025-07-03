@@ -1,8 +1,8 @@
-const AWS = require('aws-sdk');
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 
-const dynamodb = new AWS.DynamoDB.DocumentClient({
-  region: process.env.REGION || 'eu-west-1'
-});
+const client = new DynamoDBClient({ region: process.env.REGION || 'eu-west-1' });
+const dynamodb = DynamoDBDocumentClient.from(client);
 
 const TABLE_NAME = process.env.STORAGE_TDDPROJECT_NAME || 'tddproject';
 
@@ -28,7 +28,7 @@ function validateUserData(userData) {
     errors.push('Name must be less than 256 characters');
   }
   
-  if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+  if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email.trim())) {
     errors.push('Invalid email format');
   }
   
@@ -40,8 +40,11 @@ function validateUserData(userData) {
     errors.push('Age must be a positive integer between 0 and 150');
   }
   
-  if (userData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(userData.phone.replace(/\s+/g, ''))) {
-    errors.push('Invalid phone number format');
+  if (userData.phone) {
+    const cleanPhone = userData.phone.replace(/[\s\-\(\)]/g, '');
+    if (!/^[\+]?[0-9]{7,15}$/.test(cleanPhone)) {
+      errors.push('Invalid phone number format');
+    }
   }
   
   return errors;
@@ -71,25 +74,35 @@ async function addUser(userId, userData) {
 
   const item = {
     user: userId.trim(),
-    ...userData,
     name: userData.name.trim(),
-    email: userData.email ? userData.email.trim().toLowerCase() : undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  const params = {
+  if (userData.email) {
+    item.email = userData.email.trim().toLowerCase();
+  }
+  
+  if (userData.age !== undefined) {
+    item.age = userData.age;
+  }
+  
+  if (userData.phone) {
+    item.phone = userData.phone;
+  }
+
+  const command = new PutCommand({
     TableName: TABLE_NAME,
     Item: item,
     ConditionExpression: 'attribute_not_exists(#user)',
     ExpressionAttributeNames: {
       '#user': 'user'
     }
-  };
+  });
 
   try {
     logger.info('Attempting to create user in DynamoDB', { userId, tableName: TABLE_NAME });
-    await dynamodb.put(params).promise();
+    await dynamodb.send(command);
     
     logger.info('User created successfully', { userId, createdAt: item.createdAt });
     return {
@@ -98,7 +111,7 @@ async function addUser(userId, userData) {
       user: item
     };
   } catch (error) {
-    if (error.code === 'ConditionalCheckFailedException') {
+    if (error.name === 'ConditionalCheckFailedException') {
       const userExistsError = new Error('User already exists');
       logger.warn('Attempt to create existing user', { userId, error: userExistsError });
       throw userExistsError;
@@ -122,16 +135,16 @@ async function getUser(userId) {
     throw error;
   }
 
-  const params = {
+  const command = new GetCommand({
     TableName: TABLE_NAME,
     Key: {
       user: userId.trim()
     }
-  };
+  });
 
   try {
     logger.info('Attempting to retrieve user from DynamoDB', { userId, tableName: TABLE_NAME });
-    const result = await dynamodb.get(params).promise();
+    const result = await dynamodb.send(command);
     
     if (!result.Item) {
       const error = new Error('User not found');
@@ -197,7 +210,7 @@ async function updateUser(userId, updateData) {
   expressionAttributeNames['#updatedAt'] = 'updatedAt';
   expressionAttributeValues[':updatedAt'] = new Date().toISOString();
 
-  const params = {
+  const command = new UpdateCommand({
     TableName: TABLE_NAME,
     Key: {
       user: userId.trim()
@@ -207,13 +220,13 @@ async function updateUser(userId, updateData) {
     ExpressionAttributeValues: expressionAttributeValues,
     ConditionExpression: 'attribute_exists(#user)',
     ReturnValues: 'ALL_NEW'
-  };
+  });
 
   expressionAttributeNames['#user'] = 'user';
 
   try {
     logger.info('Attempting to update user in DynamoDB', { userId, tableName: TABLE_NAME });
-    const result = await dynamodb.update(params).promise();
+    const result = await dynamodb.send(command);
     
     logger.info('User updated successfully', { userId, updatedAt: expressionAttributeValues[':updatedAt'] });
     return {
@@ -222,7 +235,7 @@ async function updateUser(userId, updateData) {
       user: result.Attributes
     };
   } catch (error) {
-    if (error.code === 'ConditionalCheckFailedException') {
+    if (error.name === 'ConditionalCheckFailedException') {
       const userNotFoundError = new Error('User not found');
       logger.warn('Attempt to update non-existent user', { userId, error: userNotFoundError });
       throw userNotFoundError;

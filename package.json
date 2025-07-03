@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:unit": "jest",
     "test:lambda": "cd amplify/backend/function/tddprojetiimmm2e930d3b/src && npm run test:unit",
-    "test:all": "npm run test:unit && npm run test:lambda",
+    "test:all": "npm run test:lambda && npm run test:unit",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
   },
