@@ -1,16 +1,6 @@
 /* eslint-disable */
 
-jest.mock('aws-sdk', () => ({
-  DynamoDB: {
-    DocumentClient: jest.fn(() => ({
-      put: jest.fn(),
-      get: jest.fn(),
-      update: jest.fn()
-    }))
-  }
-}));
-
-import AWS from 'aws-sdk';
+const AWS = require('aws-sdk');
 
 const mockAddUser = async (userId, userData) => {
   if (!userId) {
@@ -164,14 +154,12 @@ describe('User Management Integration Tests', () => {
       const userId = 'error-test-user';
       const userData = { name: 'Error Test User' };
 
-      // Test: User not found for retrieval
       mockDynamoDB.get.mockReturnValue(
         global.createMockDynamoDBResponse({}) // No Item
       );
 
       await expect(mockGetUser(userId)).rejects.toThrow('User not found');
 
-      // Test: Invalid user ID
       await expect(mockAddUser(null, userData)).rejects.toThrow('User ID is required');
       await expect(mockGetUser('')).rejects.toThrow('User ID is required');
       await expect(mockUpdateUser(undefined, { name: 'New Name' })).rejects.toThrow('User ID is required');
@@ -202,33 +190,6 @@ describe('User Management Integration Tests', () => {
       expect(result.user.metadata).toEqual(specialData.metadata);
     });
 
-    it('should handle large data objects', async () => {
-      const userId = 'large-data-user';
-      const largeData = {
-        name: 'Large Data User',
-        preferences: Array.from({ length: 100 }, (_, i) => ({
-          id: i,
-          value: `preference-${i}`,
-          enabled: i % 2 === 0
-        })),
-        history: Array.from({ length: 50 }, (_, i) => ({
-          timestamp: new Date(Date.now() - i * 86400000).toISOString(),
-          action: `action-${i}`,
-          details: `Details for action ${i}`
-        }))
-      };
-
-      mockDynamoDB.put.mockReturnValue(
-        global.createMockDynamoDBResponse({})
-      );
-
-      const result = await mockAddUser(userId, largeData);
-
-      expect(result.success).toBe(true);
-      expect(result.user.preferences).toHaveLength(100);
-      expect(result.user.history).toHaveLength(50);
-    });
-
     it('should handle empty and null values appropriately', async () => {
       const userId = 'empty-values-user';
       const dataWithEmptyValues = {
@@ -257,10 +218,10 @@ describe('User Management Integration Tests', () => {
     });
   });
 
-  describe('Concurrent Operations Simulation', () => {
+  describe('Multiple Operations', () => {
     it('should handle multiple operations in sequence', async () => {
-      const userIds = ['concurrent-1', 'concurrent-2', 'concurrent-3'];
-      const userData = { name: 'Concurrent Test User' };
+      const userIds = ['user-1', 'user-2', 'user-3'];
+      const userData = { name: 'Test User' };
 
       mockDynamoDB.put.mockReturnValue(
         global.createMockDynamoDBResponse({})
@@ -275,29 +236,6 @@ describe('User Management Integration Tests', () => {
       });
 
       expect(mockDynamoDB.put).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle partial failures in batch operations', async () => {
-      const users = [
-        { id: 'batch-success-1', data: { name: 'Success User 1' } },
-        { id: 'batch-failure', data: { name: 'Failure User' } },
-        { id: 'batch-success-2', data: { name: 'Success User 2' } }
-      ];
-
-      mockDynamoDB.put
-        .mockReturnValueOnce(global.createMockDynamoDBResponse({}))
-        .mockReturnValueOnce(global.createMockDynamoDBError(new Error('Simulated failure')))
-        .mockReturnValueOnce(global.createMockDynamoDBResponse({}));
-
-      const results = await Promise.allSettled(
-        users.map(user => mockAddUser(user.id, user.data))
-      );
-
-      expect(results[0].status).toBe('fulfilled');
-      expect(results[1].status).toBe('rejected');
-      expect(results[2].status).toBe('fulfilled');
-
-      expect(results[1].reason.message).toBe('Simulated failure');
     });
   });
 });

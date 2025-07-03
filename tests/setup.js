@@ -1,5 +1,4 @@
 /* eslint-disable */
-// tests/setup.js
 
 process.env.NODE_ENV = 'test';
 process.env.REGION = 'eu-west-1';
